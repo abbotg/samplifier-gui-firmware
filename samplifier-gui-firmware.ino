@@ -116,8 +116,10 @@ uint16_t readRegister(uint16_t address) {
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   USART0->US_THR = 0xFF;
 
-    delayMicroseconds(860);
-  USART0->US_CR |= (0x1u << 19); //forces CS high
+  /*  delayMicroseconds(860);
+  USART0->US_CR |= (0x1u << 19); //forces CS high 
+//'0b100100011010''0b100100011010'*/
+
 
   while (USART0->US_CSR & 0x01u == 0) {}
   USART0->US_THR = 0x00;
