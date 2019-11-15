@@ -96,6 +96,8 @@ uint8_t lowerData = (data & 0x00FF);
     
   delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 19); //forces CS high
+
+  return 1;
   
 }
 
