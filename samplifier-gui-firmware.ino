@@ -6,7 +6,7 @@
   SPCK  --   SPCK0  --  PA17B -- SDA1
   CS    --   CTS0   --  PB26A -- Digital Pin 22 */
 
-unsigned long spiRead = 0;
+uint16_t spiRead = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -120,16 +120,17 @@ uint16_t readRegister(uint16_t address) {
   while (USART0->US_CSR & 0x01u == 0) {}
   USART0->US_THR = 0x00;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY  
-  spiRead = USART0->US_RHR;
+  spiRead = (USART0->US_RHR) << 8;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY
     
   while (USART0->US_CSR & 0x01u == 0) {}
   USART0->US_THR = 0x00;
   while(!((USART0->US_CSR 
   >> 9) & 0x01u)) {} //poll TXEMPTY  
-  spiRead = USART0->US_RHR;
+  spiRead |= USART0->US_RHR;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY
 
-  return USART0->US_THR;
+  //return USART0->US_THR;
+  return spiRead;
   
 }
