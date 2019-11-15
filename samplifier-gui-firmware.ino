@@ -121,8 +121,6 @@ uint16_t readRegister(uint16_t address) {
   USART0->US_THR = 0x00;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY  
   spiRead = USART0->US_RHR;
-  Serial.print("Data Upper: ");
-  Serial.println(spiRead, HEX);
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY
     
   while (USART0->US_CSR & 0x01u == 0) {}
@@ -130,8 +128,6 @@ uint16_t readRegister(uint16_t address) {
   while(!((USART0->US_CSR 
   >> 9) & 0x01u)) {} //poll TXEMPTY  
   spiRead = USART0->US_RHR;
-  Serial.print("Data Lower: ");
-  Serial.println(spiRead, HEX);
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY
 
   return USART0->US_THR;
