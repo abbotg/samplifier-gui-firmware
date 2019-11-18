@@ -105,6 +105,40 @@ uint16_t readRegister(uint16_t address) {
 
   uint8_t upperAddress = (address & 0xFF00) >> 8;
   uint8_t lowerAddress = (address & 0x00FF);
+  
+  delayMicroseconds(860);
+  USART0->US_CR |= (0x1u << 18); //forces CS low
+  USART0->US_THR = upperAddress;
+   
+  while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
+  USART0->US_THR = lowerAddress;
+
+  while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
+  
+  USART0->US_THR = 0x00;
+  USART0->US_MR |= 0x408CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
+
+  while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
+  while (USART0->US_CSR & 0x01u == 0) {}  // poll for RX data
+  spiRead = (USART0->US_RHR) << 8;
+  USART0->US_THR = 0x00;
+
+  while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
+  while (USART0->US_CSR & 0x01u == 0) {}  // poll for RX data
+  spiRead |= (USART0->US_RHR);
+  delayMicroseconds(860);
+  USART0->US_CR |= (0x1u << 19); //forces CS high
+  USART0->US_MR |= 0x409CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
+
+  return spiRead;
+  }
+  
+
+/*
+uint16_t readRegister(uint16_t address) {
+
+  uint8_t upperAddress = (address & 0xFF00) >> 8;
+  uint8_t lowerAddress = (address & 0x00FF);
 
   delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 18); //forces CS low
@@ -116,10 +150,8 @@ uint16_t readRegister(uint16_t address) {
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   USART0->US_THR = 0xFF;
 
-  /*  delayMicroseconds(860);
-  USART0->US_CR |= (0x1u << 19); //forces CS high 
-//'0b100100011010''0b100100011010'*/
-
+  //  delayMicroseconds(860);
+  //USART0->US_CR |= (0x1u << 19); //forces CS high
 
   while (USART0->US_CSR & 0x01u == 0) {}
   USART0->US_THR = 0x00;
@@ -137,4 +169,4 @@ uint16_t readRegister(uint16_t address) {
   //return USART0->US_THR;
   return spiRead;
   
-}
+} */
