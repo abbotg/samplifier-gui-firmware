@@ -1,30 +1,26 @@
-  /*
+ /*
   SPI        SAM3X       PIO      Due
   ---------------------------------------------
   MOSI  --   RX0    --  PA11A -- RX1 
   MISO  --   TX0    --  PA10A -- TX1
   SPCK  --   SPCK0  --  PA17B -- SDA1
   CS    --   CTS0   --  PB26A -- Digital Pin 22 */
-
 uint16_t spiRead = 0;
-
 void setup() {
   Serial.begin(9600);
   Serial1.begin(9600); //initialize USART0;
-
   analogWriteResolution(12);
   analogWrite(DAC0, 390); 
+  digitalWrite(7, HIGH); // initialize RESET
   
   USART0->US_WPMR = 0x55534100; //Disables write protect for mode reg
-  USART0->US_MR |= 0x409CE; //Set to SPI Master, 8 bit transfer, CPHA = 1, CPOL = 0, CLK0 = 1
+  //USART0->US_MR |= 0x409CE; //Set to SPI Master, 8 bit transfer, CPHA = 1, CPOL = 0, CLK0 = 1
+  USART0->US_MR |= 0x408CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
   USART0->US_CR |= 0x50;  //Enable TX and RX
   USART0->US_BRGR |= 0xFFFF;  //Divides MCLK by FFFF (pg. 843)
-
  
   PIOA->PIO_WPMR = 0x50494F00; //Disables PIOA write protect
   PIOB->PIO_WPMR = 0x50494F00; //Disables PIOB write protect
-
-
   //Set up MOSI
   PIOA->PIO_ABSR |= (0u << 11); //Assigns PA11 to Peripheral A function
   PIOA->PIO_PDR  |= (1u << 11); //Enables peripheral control for PA11
@@ -41,18 +37,15 @@ void setup() {
   PIOB->PIO_ABSR |= (0u << 25); //Assigns PB25 to Peripheral A function (pg. 656)  
   PIOB->PIO_PDR |= (1u << 25); //Enables peripheral control for PB25 (pg. 634) 
 }
-
 uint8_t incomingByte;
 uint8_t buf[4];
 uint8_t address;
 uint16_t data;
-
 void loop() {
   // send data only when you receive data:
   if (Serial.available() > 0) {
     // read the incoming byte:
     Serial.readBytes(buf, 4);
-
     if (buf[0] == 0) { // read
        address = buf[1];
        data = readRegister(address);
@@ -66,21 +59,23 @@ void loop() {
        buf[2] = writeRegister(address, data);
        Serial.write(buf, 4);
        Serial.flush();
+    } else if (buf[0] == 2) {
+      digitalWrite(7, LOW);
+      delayMicroseconds(1000);
+      digitalWrite(7, HIGH);
+      Serial.write(buf, 4);
+      Serial.flush();
     }
   }
 }
-
 /*
  * Returns true if data was successfully written
  */
 bool writeRegister(uint16_t address, uint16_t data) {
-
 uint8_t upperAddress = (address & 0xFF00) >> 8;
 uint8_t lowerAddress = (address & 0x00FF);
-
 uint8_t upperData = (data & 0xFF00) >>8;
 uint8_t lowerData = (data & 0x00FF);
-
     delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 18); //forces CS low
   USART0->US_THR = upperAddress;
@@ -96,13 +91,10 @@ uint8_t lowerData = (data & 0x00FF);
     
   delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 19); //forces CS high
-
   return 1;
   
 }
-
 uint16_t readRegister(uint16_t address) {
-
   uint8_t upperAddress = (address & 0xFF00) >> 8;
   uint8_t lowerAddress = (address & 0x00FF);
   
@@ -112,47 +104,37 @@ uint16_t readRegister(uint16_t address) {
    
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   USART0->US_THR = lowerAddress;
-
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   
   USART0->US_THR = 0x00;
-  USART0->US_MR |= 0x408CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
-
+  //USART0->US_MR |= 0x408CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   while (USART0->US_CSR & 0x01u == 0) {}  // poll for RX data
   spiRead = (USART0->US_RHR) << 8;
   USART0->US_THR = 0x00;
-
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   while (USART0->US_CSR & 0x01u == 0) {}  // poll for RX data
   spiRead |= (USART0->US_RHR);
   delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 19); //forces CS high
-  USART0->US_MR |= 0x409CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
-
+  //USART0->US_MR |= 0x409CE; //Set to SPI Master, 8 bit transfer, CPHA = 0, CPOL = 0, CLK0 = 1
   return spiRead;
   }
   
-
 /*
 uint16_t readRegister(uint16_t address) {
-
   uint8_t upperAddress = (address & 0xFF00) >> 8;
   uint8_t lowerAddress = (address & 0x00FF);
-
   delayMicroseconds(860);
   USART0->US_CR |= (0x1u << 18); //forces CS low
   USART0->US_THR = upperAddress;
    
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   USART0->US_THR = lowerAddress;
-
   while(!((USART0->US_CSR >> 9) & 0x1u)) {} //poll TXEMPTY  
   USART0->US_THR = 0xFF;
-
   //  delayMicroseconds(860);
   //USART0->US_CR |= (0x1u << 19); //forces CS high
-
   while (USART0->US_CSR & 0x01u == 0) {}
   USART0->US_THR = 0x00;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY  
@@ -165,7 +147,6 @@ uint16_t readRegister(uint16_t address) {
   >> 9) & 0x01u)) {} //poll TXEMPTY  
   spiRead |= USART0->US_RHR;
   while(!((USART0->US_CSR >> 9) & 0x01u)) {} //poll TXEMPTY
-
   //return USART0->US_THR;
   return spiRead;
   
